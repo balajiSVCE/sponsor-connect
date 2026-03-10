@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, UserPlus, List, Phone, BarChart3, 
-  Users, ClipboardList, LogOut, Trophy, Shield
+  Users, ClipboardList, LogOut, Trophy, Shield, MessageSquare
 } from 'lucide-react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
