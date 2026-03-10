@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
 import { toast } from 'sonner';
-import { Phone, Mail, X } from 'lucide-react';
+import { Phone, X, CheckCircle2 } from 'lucide-react';
 import { SPONSOR_TYPE_LABELS, CALL_STATUS_LABELS } from '@/types/database';
 import type { CompanyContact, CallStatus, AttemptType, SponsorType } from '@/types/database';
 
@@ -12,6 +12,7 @@ const CallList: React.FC = () => {
   const [contacts, setContacts] = useState<CompanyContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [updateModal, setUpdateModal] = useState<CompanyContact | null>(null);
+  const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!user) return;
@@ -19,7 +20,6 @@ const CallList: React.FC = () => {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
-      // Get assignments for today
       const { data: assignments } = await supabase
         .from('call_assignments')
         .select('*')
@@ -27,7 +27,6 @@ const CallList: React.FC = () => {
         .eq('date', today);
 
       if (assignments && assignments.length > 0) {
-        // Collect all contact ID ranges
         const ids: number[] = [];
         for (const a of assignments) {
           for (let i = a.contact_start_id; i <= a.contact_end_id; i++) {
@@ -42,6 +41,17 @@ const CallList: React.FC = () => {
             .in('id', ids)
             .order('id');
           setContacts(data || []);
+
+          // Check which contacts already have feedback today
+          const { data: updates } = await supabase
+            .from('call_updates')
+            .select('contact_id')
+            .in('contact_id', ids)
+            .eq('updated_by', user.id);
+
+          if (updates) {
+            setCompletedIds(new Set(updates.map(u => u.contact_id)));
+          }
         }
       } else {
         setContacts([]);
@@ -50,6 +60,10 @@ const CallList: React.FC = () => {
     };
     fetchAssigned();
   }, [user]);
+
+  const handleStatusSaved = (contactId: number) => {
+    setCompletedIds(prev => new Set([...prev, contactId]));
+  };
 
   return (
     <Layout>
@@ -80,23 +94,32 @@ const CallList: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {contacts.map(c => (
-                    <tr key={c.id}>
-                      <td className="text-muted-foreground">{c.id}</td>
-                      <td className="font-medium">{c.company_name}</td>
-                      <td className="text-sm">{c.phones?.[0] || '-'}</td>
-                      <td className="text-sm">{c.emails?.[0] || '-'}</td>
-                      <td><span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">{SPONSOR_TYPE_LABELS[c.sponsor_type]}</span></td>
-                      <td>
-                        <button
-                          onClick={() => setUpdateModal(c)}
-                          className="btn-neon px-3 py-1.5 text-xs"
-                        >
-                          Update Status
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {contacts.map(c => {
+                    const isDone = completedIds.has(c.id);
+                    return (
+                      <tr key={c.id} className={isDone ? 'bg-emerald-500/10 border-l-2 border-l-emerald-500' : ''}>
+                        <td className="text-muted-foreground">{c.id}</td>
+                        <td className="font-medium">{c.company_name}</td>
+                        <td className="text-sm">{c.phones?.[0] || '-'}</td>
+                        <td className="text-sm">{c.emails?.[0] || '-'}</td>
+                        <td><span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">{SPONSOR_TYPE_LABELS[c.sponsor_type]}</span></td>
+                        <td>
+                          {isDone ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-medium">
+                              <CheckCircle2 className="w-4 h-4" /> Done
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setUpdateModal(c)}
+                              className="btn-neon px-3 py-1.5 text-xs"
+                            >
+                              Update Status
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -109,6 +132,7 @@ const CallList: React.FC = () => {
           contact={updateModal}
           userId={user!.id}
           onClose={() => setUpdateModal(null)}
+          onSaved={handleStatusSaved}
         />
       )}
     </Layout>
@@ -119,7 +143,8 @@ const StatusUpdateModal: React.FC<{
   contact: CompanyContact;
   userId: string;
   onClose: () => void;
-}> = ({ contact, userId, onClose }) => {
+  onSaved: (contactId: number) => void;
+}> = ({ contact, userId, onClose, onSaved }) => {
   const [status, setStatus] = useState<CallStatus>('hope');
   const [description, setDescription] = useState('');
   const [nextCallTime, setNextCallTime] = useState('');
@@ -144,6 +169,7 @@ const StatusUpdateModal: React.FC<{
       toast.error('Failed to update: ' + error.message);
     } else {
       toast.success('Status updated!');
+      onSaved(contact.id);
       onClose();
     }
   };
