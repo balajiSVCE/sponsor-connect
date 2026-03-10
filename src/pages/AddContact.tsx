@@ -15,6 +15,8 @@ const AddContact: React.FC = () => {
   const [emails, setEmails] = useState(['']);
   const [sponsorType, setSponsorType] = useState<SponsorType>('money');
   const [otherDesc, setOtherDesc] = useState('');
+  const [contactPersonName, setContactPersonName] = useState('');
+  const [contactDescription, setContactDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
   const addField = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
