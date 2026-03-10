@@ -19,6 +19,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/add-contact', icon: UserPlus, label: 'Add Contact' },
     { to: '/my-contacts', icon: List, label: 'My Contacts' },
+    { to: '/all-contacts', icon: Users, label: 'All Contacts' },
     { to: '/call-list', icon: Phone, label: 'Call List' },
   ];
 

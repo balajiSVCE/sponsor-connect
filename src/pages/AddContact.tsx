@@ -15,6 +15,8 @@ const AddContact: React.FC = () => {
   const [emails, setEmails] = useState(['']);
   const [sponsorType, setSponsorType] = useState<SponsorType>('money');
   const [otherDesc, setOtherDesc] = useState('');
+  const [contactPersonName, setContactPersonName] = useState('');
+  const [contactDescription, setContactDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
   const addField = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
@@ -35,16 +37,17 @@ const AddContact: React.FC = () => {
     const cleanEmails = emails.filter(e => e.trim());
     if (!companyName.trim()) { toast.error('Company name is required'); return; }
     if (cleanPhones.length === 0) { toast.error('At least one phone number is required'); return; }
-    if (cleanEmails.length === 0) { toast.error('At least one email is required'); return; }
 
     setLoading(true);
     const { error } = await supabase.from('companies_contacts').insert({
       company_name: companyName.trim(),
       contact_found_method: contactMethod,
       phones: cleanPhones,
-      emails: cleanEmails,
+      emails: cleanEmails.length > 0 ? cleanEmails : [],
       sponsor_type: sponsorType,
       other_sponsor_description: sponsorType === 'other' ? otherDesc : null,
+      contact_person_name: contactPersonName.trim() || null,
+      contact_description: contactDescription.trim() || null,
       created_by: user.id,
     });
     setLoading(false);
@@ -59,6 +62,8 @@ const AddContact: React.FC = () => {
       setSponsorType('money');
       setOtherDesc('');
       setContactMethod('self_contact');
+      setContactPersonName('');
+      setContactDescription('');
     }
   };
 
@@ -117,9 +122,9 @@ const AddContact: React.FC = () => {
             </button>
           </div>
 
-          {/* Emails */}
+          {/* Emails (Optional) */}
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Emails</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Emails <span className="text-xs text-muted-foreground/60">(Optional)</span></label>
             {emails.map((email, i) => (
               <div key={i} className="flex gap-2 mb-2">
                 <input
@@ -139,6 +144,28 @@ const AddContact: React.FC = () => {
             <button type="button" onClick={() => addField(setEmails)} className="flex items-center gap-2 text-sm text-primary hover:underline">
               <Plus className="w-4 h-4" /> Add Another Email
             </button>
+          </div>
+
+          {/* Contact Person Name (Optional) */}
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Contact Person Name / Role <span className="text-xs text-muted-foreground/60">(Optional)</span></label>
+            <input
+              value={contactPersonName}
+              onChange={e => setContactPersonName(e.target.value)}
+              className="glass-input w-full px-4 py-2.5"
+              placeholder="e.g. John Doe - Marketing Head"
+            />
+          </div>
+
+          {/* Description (Optional) */}
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Description <span className="text-xs text-muted-foreground/60">(Optional)</span></label>
+            <textarea
+              value={contactDescription}
+              onChange={e => setContactDescription(e.target.value)}
+              className="glass-input w-full px-4 py-2.5 min-h-[80px] resize-none"
+              placeholder="Any additional notes about this contact..."
+            />
           </div>
 
           {/* Sponsor Type */}

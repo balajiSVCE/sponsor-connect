@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import AddContact from "./pages/AddContact";
 import MyContacts from "./pages/MyContacts";
 import CallList from "./pages/CallList";
+import AllContacts from "./pages/AllContacts";
 import AdminContacts from "./pages/admin/AdminContacts";
 import AssignCalls from "./pages/admin/AssignCalls";
 import Analytics from "./pages/admin/Analytics";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/add-contact" element={<ProtectedRoute><AddContact /></ProtectedRoute>} />
             <Route path="/my-contacts" element={<ProtectedRoute><MyContacts /></ProtectedRoute>} />
+            <Route path="/all-contacts" element={<ProtectedRoute><AllContacts /></ProtectedRoute>} />
             <Route path="/call-list" element={<ProtectedRoute><CallList /></ProtectedRoute>} />
             <Route path="/admin/contacts" element={<ProtectedRoute><AdminContacts /></ProtectedRoute>} />
             <Route path="/admin/assign" element={<ProtectedRoute><AssignCalls /></ProtectedRoute>} />
