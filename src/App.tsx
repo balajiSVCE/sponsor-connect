@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import AddContact from "./pages/AddContact";
 import MyContacts from "./pages/MyContacts";
 import CallList from "./pages/CallList";
+import AllContacts from "./pages/AllContacts";
 import AdminContacts from "./pages/admin/AdminContacts";
 import AssignCalls from "./pages/admin/AssignCalls";
 import Analytics from "./pages/admin/Analytics";
