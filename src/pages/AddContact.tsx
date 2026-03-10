@@ -62,6 +62,8 @@ const AddContact: React.FC = () => {
       setSponsorType('money');
       setOtherDesc('');
       setContactMethod('self_contact');
+      setContactPersonName('');
+      setContactDescription('');
     }
   };
 
