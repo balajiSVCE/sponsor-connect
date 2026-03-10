@@ -37,16 +37,17 @@ const AddContact: React.FC = () => {
     const cleanEmails = emails.filter(e => e.trim());
     if (!companyName.trim()) { toast.error('Company name is required'); return; }
     if (cleanPhones.length === 0) { toast.error('At least one phone number is required'); return; }
-    if (cleanEmails.length === 0) { toast.error('At least one email is required'); return; }
 
     setLoading(true);
     const { error } = await supabase.from('companies_contacts').insert({
       company_name: companyName.trim(),
       contact_found_method: contactMethod,
       phones: cleanPhones,
-      emails: cleanEmails,
+      emails: cleanEmails.length > 0 ? cleanEmails : [],
       sponsor_type: sponsorType,
       other_sponsor_description: sponsorType === 'other' ? otherDesc : null,
+      contact_person_name: contactPersonName.trim() || null,
+      contact_description: contactDescription.trim() || null,
       created_by: user.id,
     });
     setLoading(false);
