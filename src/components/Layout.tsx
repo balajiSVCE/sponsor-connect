@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, UserPlus, List, Phone, BarChart3, 
-  Users, ClipboardList, LogOut, Trophy, Shield
+  Users, ClipboardList, LogOut, Trophy, Shield, MessageSquare
 } from 'lucide-react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -27,6 +27,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { to: '/admin/assign', icon: Users, label: 'Assign Calls' },
     { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
     { to: '/admin/leaderboard', icon: Trophy, label: 'Leaderboard' },
+    { to: '/admin/feedback', icon: MessageSquare, label: 'Call Feedback' },
   ];
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>

@@ -22,7 +22,7 @@ const AdminLeaderboard: React.FC = () => {
     const fetch = async () => {
       const today = new Date().toISOString().split('T')[0];
       const [{ data: profiles }, { data: contacts }] = await Promise.all([
-        supabase.from('users_profile').select('id, name, department'),
+        supabase.from('users_profile').select('id, name, department, role').neq('role', 'admin'),
         supabase.from('companies_contacts').select('created_by, created_at'),
       ]);
 

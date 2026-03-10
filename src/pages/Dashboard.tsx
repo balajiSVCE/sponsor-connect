@@ -32,7 +32,7 @@ const Dashboard: React.FC = () => {
         .eq('created_by', user.id);
       setTotalCount(totalC || 0);
 
-      // Leaderboard - get all contacts with profiles
+      // Leaderboard - get all contacts with profiles (exclude admins)
       const { data: contacts } = await supabase
         .from('companies_contacts')
         .select('created_by');
@@ -45,9 +45,11 @@ const Dashboard: React.FC = () => {
         
         const { data: profiles } = await supabase
           .from('users_profile')
-          .select('id, name');
+          .select('id, name, role')
+          .neq('role', 'admin');
         
         const lb = Object.entries(counts)
+          .filter(([userId]) => profiles?.some(p => p.id === userId))
           .map(([userId, count]) => ({
             name: profiles?.find(p => p.id === userId)?.name || 'Unknown',
             count,
