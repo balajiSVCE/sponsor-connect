@@ -4,7 +4,13 @@ import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
 import { toast } from 'sonner';
 import { SPONSOR_TYPE_LABELS } from '@/types/database';
-import type { UserProfile, SponsorType, CompanyContact } from '@/types/database';
+import type { UserProfile, SponsorType } from '@/types/database';
+
+interface FilteredContact {
+  id: number;
+  company_name: string;
+  sponsor_type: SponsorType;
+}
 
 const AssignCalls: React.FC = () => {
   const { isAdmin } = useAuth();
