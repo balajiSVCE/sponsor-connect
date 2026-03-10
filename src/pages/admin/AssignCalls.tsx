@@ -21,7 +21,7 @@ const AssignCalls: React.FC = () => {
 
   // Sponsor type filter
   const [sponsorFilter, setSponsorFilter] = useState<SponsorType | ''>('');
-  const [filteredContacts, setFilteredContacts] = useState<CompanyContact[]>([]);
+  const [filteredContacts, setFilteredContacts] = useState<FilteredContact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [startId, setStartId] = useState('');
   const [endId, setEndId] = useState('');

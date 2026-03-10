@@ -27,6 +27,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { to: '/admin/assign', icon: Users, label: 'Assign Calls' },
     { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
     { to: '/admin/leaderboard', icon: Trophy, label: 'Leaderboard' },
+    { to: '/admin/feedback', icon: MessageSquare, label: 'Call Feedback' },
   ];
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
