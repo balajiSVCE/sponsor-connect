@@ -122,9 +122,9 @@ const AddContact: React.FC = () => {
             </button>
           </div>
 
-          {/* Emails */}
+          {/* Emails (Optional) */}
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Emails</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Emails <span className="text-xs text-muted-foreground/60">(Optional)</span></label>
             {emails.map((email, i) => (
               <div key={i} className="flex gap-2 mb-2">
                 <input
@@ -144,6 +144,28 @@ const AddContact: React.FC = () => {
             <button type="button" onClick={() => addField(setEmails)} className="flex items-center gap-2 text-sm text-primary hover:underline">
               <Plus className="w-4 h-4" /> Add Another Email
             </button>
+          </div>
+
+          {/* Contact Person Name (Optional) */}
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Contact Person Name / Role <span className="text-xs text-muted-foreground/60">(Optional)</span></label>
+            <input
+              value={contactPersonName}
+              onChange={e => setContactPersonName(e.target.value)}
+              className="glass-input w-full px-4 py-2.5"
+              placeholder="e.g. John Doe - Marketing Head"
+            />
+          </div>
+
+          {/* Description (Optional) */}
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Description <span className="text-xs text-muted-foreground/60">(Optional)</span></label>
+            <textarea
+              value={contactDescription}
+              onChange={e => setContactDescription(e.target.value)}
+              className="glass-input w-full px-4 py-2.5 min-h-[80px] resize-none"
+              placeholder="Any additional notes about this contact..."
+            />
           </div>
 
           {/* Sponsor Type */}
