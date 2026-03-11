@@ -3,66 +3,80 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
 import { toast } from 'sonner';
-import { Phone, X, CheckCircle2 } from 'lucide-react';
+import { Phone, X, CheckCircle2, Pencil, CalendarPlus } from 'lucide-react';
 import { SPONSOR_TYPE_LABELS, CALL_STATUS_LABELS } from '@/types/database';
-import type { CompanyContact, CallStatus, AttemptType, SponsorType } from '@/types/database';
+import type { CompanyContact, CallStatus, AttemptType, SponsorType, CallUpdate } from '@/types/database';
 
 const CallList: React.FC = () => {
   const { user } = useAuth();
   const [contacts, setContacts] = useState<CompanyContact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updateModal, setUpdateModal] = useState<CompanyContact | null>(null);
-  const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
+  const [updateModal, setUpdateModal] = useState<{ contact: CompanyContact; existing?: CallUpdate } | null>(null);
+  const [completedMap, setCompletedMap] = useState<Record<number, CallUpdate>>({});
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!user) return;
-    const fetchAssigned = async () => {
-      setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
+    setLoading(true);
+    const today = new Date().toISOString().split('T')[0];
 
-      const { data: assignments } = await supabase
-        .from('call_assignments')
-        .select('*')
-        .eq('assigned_user_id', user.id)
-        .eq('date', today);
+    const { data: assignments } = await supabase
+      .from('call_assignments')
+      .select('*')
+      .eq('assigned_user_id', user.id)
+      .eq('date', today);
 
-      if (assignments && assignments.length > 0) {
-        const ids: number[] = [];
-        for (const a of assignments) {
-          for (let i = a.contact_start_id; i <= a.contact_end_id; i++) {
-            ids.push(i);
-          }
-        }
-
-        if (ids.length > 0) {
-          const { data } = await supabase
-            .from('companies_contacts')
-            .select('*')
-            .in('id', ids)
-            .order('id');
-          setContacts(data || []);
-
-          // Check which contacts already have feedback today
-          const { data: updates } = await supabase
-            .from('call_updates')
-            .select('contact_id')
-            .in('contact_id', ids)
-            .eq('updated_by', user.id);
-
-          if (updates) {
-            setCompletedIds(new Set(updates.map(u => u.contact_id)));
-          }
-        }
-      } else {
-        setContacts([]);
+    if (assignments && assignments.length > 0) {
+      const ids: number[] = [];
+      for (const a of assignments) {
+        for (let i = a.contact_start_id; i <= a.contact_end_id; i++) ids.push(i);
       }
-      setLoading(false);
-    };
-    fetchAssigned();
-  }, [user]);
 
-  const handleStatusSaved = (contactId: number) => {
-    setCompletedIds(prev => new Set([...prev, contactId]));
+      if (ids.length > 0) {
+        const { data } = await supabase.from('companies_contacts').select('*').in('id', ids).order('id');
+        setContacts(data || []);
+
+        const { data: updates } = await supabase
+          .from('call_updates')
+          .select('*')
+          .in('contact_id', ids)
+          .eq('updated_by', user.id);
+
+        if (updates) {
+          const map: Record<number, CallUpdate> = {};
+          updates.forEach(u => { map[u.contact_id] = u; });
+          setCompletedMap(map);
+        }
+      }
+    } else {
+      setContacts([]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, [user]);
+
+  const handleStatusSaved = () => { fetchData(); };
+
+  const downloadICS = (followUpDate: string, companyName: string) => {
+    const dt = new Date(followUpDate);
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const end = new Date(dt.getTime() + 30 * 60000);
+    const ics = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART:${fmt(dt)}
+DTEND:${fmt(end)}
+SUMMARY:Follow-up Call - ${companyName}
+DESCRIPTION:Follow-up call with ${companyName}
+END:VEVENT
+END:VCALENDAR`;
+    const blob = new Blob([ics], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `followup-${companyName.replace(/\s+/g, '-')}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -90,12 +104,14 @@ const CallList: React.FC = () => {
                     <th>Phone</th>
                     <th>Email</th>
                     <th>Sponsor Type</th>
+                    <th>Status</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {contacts.map(c => {
-                    const isDone = completedIds.has(c.id);
+                    const update = completedMap[c.id];
+                    const isDone = !!update;
                     return (
                       <tr key={c.id} className={isDone ? 'bg-emerald-500/10 border-l-2 border-l-emerald-500' : ''}>
                         <td className="text-muted-foreground">{c.id}</td>
@@ -104,13 +120,35 @@ const CallList: React.FC = () => {
                         <td className="text-sm">{c.emails?.[0] || '-'}</td>
                         <td><span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">{SPONSOR_TYPE_LABELS[c.sponsor_type]}</span></td>
                         <td>
-                          {isDone ? (
+                          {isDone && (
                             <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-medium">
-                              <CheckCircle2 className="w-4 h-4" /> Done
+                              <CheckCircle2 className="w-4 h-4" /> {CALL_STATUS_LABELS[update.status]}
                             </span>
+                          )}
+                        </td>
+                        <td className="flex items-center gap-1">
+                          {isDone ? (
+                            <>
+                              <button
+                                onClick={() => setUpdateModal({ contact: c, existing: update })}
+                                className="p-1.5 rounded-lg hover:bg-primary/10 text-primary transition-colors"
+                                title="Edit feedback"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              {update.follow_up_date && (
+                                <button
+                                  onClick={() => downloadICS(update.follow_up_date!, c.company_name)}
+                                  className="p-1.5 rounded-lg hover:bg-primary/10 text-primary transition-colors"
+                                  title="Add to calendar"
+                                >
+                                  <CalendarPlus className="w-4 h-4" />
+                                </button>
+                              )}
+                            </>
                           ) : (
                             <button
-                              onClick={() => setUpdateModal(c)}
+                              onClick={() => setUpdateModal({ contact: c })}
                               className="btn-neon px-3 py-1.5 text-xs"
                             >
                               Update Status
@@ -129,7 +167,8 @@ const CallList: React.FC = () => {
 
       {updateModal && (
         <StatusUpdateModal
-          contact={updateModal}
+          contact={updateModal.contact}
+          existing={updateModal.existing}
           userId={user!.id}
           onClose={() => setUpdateModal(null)}
           onSaved={handleStatusSaved}
@@ -141,20 +180,25 @@ const CallList: React.FC = () => {
 
 const StatusUpdateModal: React.FC<{
   contact: CompanyContact;
+  existing?: CallUpdate;
   userId: string;
   onClose: () => void;
-  onSaved: (contactId: number) => void;
-}> = ({ contact, userId, onClose, onSaved }) => {
-  const [status, setStatus] = useState<CallStatus>('hope');
-  const [description, setDescription] = useState('');
-  const [nextCallTime, setNextCallTime] = useState('');
-  const [attemptType, setAttemptType] = useState<AttemptType>('reschedule');
-  const [sponsorType, setSponsorType] = useState<SponsorType>('money');
+  onSaved: () => void;
+}> = ({ contact, existing, userId, onClose, onSaved }) => {
+  const [status, setStatus] = useState<CallStatus>(existing?.status || 'hope');
+  const [description, setDescription] = useState(existing?.description || '');
+  const [nextCallTime, setNextCallTime] = useState(existing?.next_call_time || '');
+  const [attemptType, setAttemptType] = useState<AttemptType>(existing?.attempt_type || 'reschedule');
+  const [sponsorType, setSponsorType] = useState<SponsorType>(existing?.sponsor_type || 'money');
+  const [followUpDate, setFollowUpDate] = useState(existing?.follow_up_date || '');
   const [saving, setSaving] = useState(false);
+
+  const isEdit = !!existing;
+  const showFollowUp = status !== 'rejected';
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await supabase.from('call_updates').insert({
+    const payload = {
       contact_id: contact.id,
       updated_by: userId,
       status,
@@ -162,23 +206,31 @@ const StatusUpdateModal: React.FC<{
       next_call_time: status === 'no_response' ? nextCallTime || null : null,
       attempt_type: status === 'no_response' ? attemptType : null,
       sponsor_type: (status === 'hope' || status === 'accepted') ? sponsorType : null,
-    });
+      follow_up_date: showFollowUp && followUpDate ? followUpDate : null,
+    };
+
+    let error;
+    if (isEdit) {
+      ({ error } = await supabase.from('call_updates').update(payload).eq('id', existing.id));
+    } else {
+      ({ error } = await supabase.from('call_updates').insert(payload));
+    }
     setSaving(false);
 
     if (error) {
-      toast.error('Failed to update: ' + error.message);
+      toast.error('Failed to save: ' + error.message);
     } else {
-      toast.success('Status updated!');
-      onSaved(contact.id);
+      toast.success(isEdit ? 'Feedback updated!' : 'Status updated!');
+      onSaved();
       onClose();
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm animate-fade-in">
-      <div className="glass-card w-full max-w-lg p-6 space-y-4 animate-slide-up">
+      <div className="glass-card w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto scrollbar-glass">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold font-display">Update Status — {contact.company_name}</h2>
+          <h2 className="text-lg font-bold font-display">{isEdit ? 'Edit' : 'Update'} — {contact.company_name}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted/30"><X className="w-5 h-5" /></button>
         </div>
 
@@ -218,13 +270,32 @@ const StatusUpdateModal: React.FC<{
           </div>
         )}
 
+        {showFollowUp && (
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+              Follow-up Call Date & Time <span className="text-xs text-muted-foreground/60">(Optional)</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={followUpDate}
+              onChange={e => setFollowUpDate(e.target.value)}
+              className="glass-input w-full px-4 py-2.5"
+            />
+            {followUpDate && (
+              <p className="text-xs text-primary mt-1.5 flex items-center gap-1">
+                <CalendarPlus className="w-3 h-3" /> After saving, you can download an .ics file to add to your calendar
+              </p>
+            )}
+          </div>
+        )}
+
         <div>
           <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Description</label>
           <textarea value={description} onChange={e => setDescription(e.target.value)} className="glass-input w-full px-4 py-2.5 min-h-[80px] resize-none" placeholder="Add notes about the call..." />
         </div>
 
         <button onClick={handleSave} disabled={saving} className="btn-neon w-full py-3 disabled:opacity-50">
-          {saving ? 'Saving...' : 'Save Update'}
+          {saving ? 'Saving...' : isEdit ? 'Update Feedback' : 'Save Update'}
         </button>
       </div>
     </div>
