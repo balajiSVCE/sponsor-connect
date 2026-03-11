@@ -40,6 +40,8 @@ export interface CompanyContact {
   emails: string[];
   sponsor_type: SponsorType;
   other_sponsor_description: string | null;
+  contact_person_name: string | null;
+  contact_description: string | null;
   created_by: string;
   created_at: string;
   // joined
