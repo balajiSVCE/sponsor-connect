@@ -65,6 +65,7 @@ export interface CallUpdate {
   next_call_time: string | null;
   attempt_type: AttemptType | null;
   sponsor_type: SponsorType | null;
+  follow_up_date: string | null;
   updated_at: string;
 }
 
