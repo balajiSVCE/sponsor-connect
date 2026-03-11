@@ -15,6 +15,7 @@ import AssignCalls from "./pages/admin/AssignCalls";
 import Analytics from "./pages/admin/Analytics";
 import AdminLeaderboard from "./pages/admin/AdminLeaderboard";
 import AdminCallFeedback from "./pages/admin/AdminCallFeedback";
+import AdminAllocations from "./pages/admin/AdminAllocations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/admin/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/admin/leaderboard" element={<ProtectedRoute><AdminLeaderboard /></ProtectedRoute>} />
             <Route path="/admin/feedback" element={<ProtectedRoute><AdminCallFeedback /></ProtectedRoute>} />
+            <Route path="/admin/allocations" element={<ProtectedRoute><AdminAllocations /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

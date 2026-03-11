@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, UserPlus, List, Phone, BarChart3, 
-  Users, ClipboardList, LogOut, Trophy, Shield, MessageSquare
+  Users, ClipboardList, LogOut, Trophy, Shield, MessageSquare, GitGraph
 } from 'lucide-react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -26,6 +26,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const adminLinks = [
     { to: '/admin/contacts', icon: ClipboardList, label: 'All Contacts' },
     { to: '/admin/assign', icon: Users, label: 'Assign Calls' },
+    { to: '/admin/allocations', icon: GitGraph, label: 'Allocations' },
     { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
     { to: '/admin/leaderboard', icon: Trophy, label: 'Leaderboard' },
     { to: '/admin/feedback', icon: MessageSquare, label: 'Call Feedback' },
@@ -42,12 +43,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="min-h-screen flex">
       {/* Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 glass border-r border-border/30 p-4 sticky top-0 h-screen">
-        <div className="mb-8 px-4 pt-2">
+        <div className="mb-6 px-4 pt-2">
           <h2 className="text-xl font-bold font-display gradient-text">SponsorHub</h2>
           <p className="text-xs text-muted-foreground mt-1">Event Sponsorship Manager</p>
         </div>
 
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-glass">
           {userLinks.map(link => (
             <NavLink key={link.to} to={link.to} className={linkClass}>
               <link.icon className="w-4 h-4" />
@@ -73,8 +74,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           )}
         </nav>
 
-        <div className="border-t border-border/30 pt-4 mt-4">
-          <div className="px-4 mb-3">
+        {/* Always visible logout section */}
+        <div className="border-t border-border/30 pt-3 mt-2 flex-shrink-0">
+          <div className="px-4 mb-2">
             <p className="text-sm font-medium truncate">{profile?.name}</p>
             <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
             {isAdmin && (
@@ -132,7 +134,7 @@ const MobileMenu: React.FC<{
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 w-64 glass-card p-4 space-y-1 animate-slide-up z-50">
+        <div className="absolute right-0 top-12 w-64 glass-card p-4 space-y-1 animate-slide-up z-50 max-h-[80vh] overflow-y-auto scrollbar-glass">
           {profile && (
             <div className="px-3 py-2 mb-2 border-b border-border/30">
               <p className="text-sm font-medium">{profile.name}</p>

@@ -22,7 +22,6 @@ const AdminContacts: React.FC = () => {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
-      // Stats
       const [{ count: totalC }, { count: todayC }, { count: usersC }, { count: callsC }] = await Promise.all([
         supabase.from('companies_contacts').select('*', { count: 'exact', head: true }),
         supabase.from('companies_contacts').select('*', { count: 'exact', head: true }).gte('created_at', today + 'T00:00:00'),
@@ -31,13 +30,11 @@ const AdminContacts: React.FC = () => {
       ]);
       setStats({ total: totalC || 0, today: todayC || 0, users: usersC || 0, calls: callsC || 0 });
 
-      // Profiles
       const { data: profs } = await supabase.from('users_profile').select('id, name');
       const pMap: Record<string, string> = {};
       profs?.forEach(p => pMap[p.id] = p.name);
       setProfiles(pMap);
 
-      // Contacts
       let query = supabase
         .from('companies_contacts')
         .select('*')
@@ -52,9 +49,10 @@ const AdminContacts: React.FC = () => {
   }, [isAdmin, search, page]);
 
   const downloadCSV = () => {
-    const headers = ['ID', 'Company', 'Phones', 'Emails', 'Sponsor Type', 'Added By', 'Date'];
+    const headers = ['ID', 'Company', 'Contact Person', 'Description', 'Phones', 'Emails', 'Sponsor Type', 'Added By', 'Date'];
     const rows = contacts.map(c => [
-      c.id, c.company_name, c.phones?.join('; '), c.emails?.join('; '),
+      c.id, c.company_name, c.contact_person_name || '', c.contact_description || '',
+      c.phones?.join('; '), c.emails?.join('; '),
       SPONSOR_TYPE_LABELS[c.sponsor_type], profiles[c.created_by] || 'Unknown',
       new Date(c.created_at).toLocaleDateString()
     ]);
@@ -80,7 +78,6 @@ const AdminContacts: React.FC = () => {
       <div className="max-w-7xl mx-auto animate-fade-in space-y-6">
         <h1 className="text-3xl font-bold font-display gradient-text">Admin — All Contacts</h1>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((s, i) => (
             <div key={i} className="glass-card p-5">
@@ -95,7 +92,6 @@ const AdminContacts: React.FC = () => {
           ))}
         </div>
 
-        {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-3 justify-between">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -106,7 +102,6 @@ const AdminContacts: React.FC = () => {
           </button>
         </div>
 
-        {/* Table */}
         <div className="glass-card overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-16">
@@ -119,6 +114,8 @@ const AdminContacts: React.FC = () => {
                   <tr>
                     <th>ID</th>
                     <th>Company</th>
+                    <th>Contact Person</th>
+                    <th>Description</th>
                     <th>Phones</th>
                     <th>Emails</th>
                     <th>Sponsor Type</th>
@@ -131,8 +128,10 @@ const AdminContacts: React.FC = () => {
                     <tr key={c.id}>
                       <td className="text-muted-foreground">{c.id}</td>
                       <td className="font-medium">{c.company_name}</td>
+                      <td className="text-sm">{c.contact_person_name || '—'}</td>
+                      <td className="text-sm max-w-[200px] truncate">{c.contact_description || '—'}</td>
                       <td className="text-sm">{c.phones?.join(', ')}</td>
-                      <td className="text-sm">{c.emails?.join(', ')}</td>
+                      <td className="text-sm">{c.emails?.join(', ') || '—'}</td>
                       <td><span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">{SPONSOR_TYPE_LABELS[c.sponsor_type]}</span></td>
                       <td className="text-sm">{profiles[c.created_by] || 'Unknown'}</td>
                       <td className="text-sm text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>

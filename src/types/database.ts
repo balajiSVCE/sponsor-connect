@@ -40,6 +40,8 @@ export interface CompanyContact {
   emails: string[];
   sponsor_type: SponsorType;
   other_sponsor_description: string | null;
+  contact_person_name: string | null;
+  contact_description: string | null;
   created_by: string;
   created_at: string;
   // joined
@@ -63,6 +65,7 @@ export interface CallUpdate {
   next_call_time: string | null;
   attempt_type: AttemptType | null;
   sponsor_type: SponsorType | null;
+  follow_up_date: string | null;
   updated_at: string;
 }
 
