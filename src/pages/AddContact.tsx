@@ -101,7 +101,7 @@ const AddContact: React.FC = () => {
 
           {/* Phone Numbers */}
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Phone Numbers</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Phone Numbers <span className="text-xs text-muted-foreground/60">(Optional)</span></label>
             {phones.map((phone, i) => (
               <div key={i} className="flex gap-2 mb-2">
                 <input
