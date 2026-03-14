@@ -64,6 +64,7 @@ const App = () => (
             <Route path="/admin/leaderboard" element={<ProtectedRoute><AdminLeaderboard /></ProtectedRoute>} />
             <Route path="/admin/feedback" element={<ProtectedRoute><AdminCallFeedback /></ProtectedRoute>} />
             <Route path="/admin/allocations" element={<ProtectedRoute><AdminAllocations /></ProtectedRoute>} />
+            <Route path="/admin/duplicates" element={<ProtectedRoute><AdminDuplicates /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
