@@ -36,7 +36,7 @@ const AddContact: React.FC = () => {
     const cleanPhones = phones.filter(p => p.trim());
     const cleanEmails = emails.filter(e => e.trim());
     if (!companyName.trim()) { toast.error('Company name is required'); return; }
-    if (cleanPhones.length === 0) { toast.error('At least one phone number is required'); return; }
+    
 
     setLoading(true);
     const { error } = await supabase.from('companies_contacts').insert({
