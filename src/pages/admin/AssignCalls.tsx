@@ -12,11 +12,13 @@ interface FilteredContact {
   company_name: string;
   sponsor_type: SponsorType;
   contact_person_name: string | null;
+  created_by: string;
 }
 
 const AssignCalls: React.FC = () => {
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [userId, setUserId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
@@ -26,22 +28,40 @@ const AssignCalls: React.FC = () => {
   const [contacts, setContacts] = useState<FilteredContact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [allocatedIds, setAllocatedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!isAdmin) return;
-    supabase.from('users_profile').select('*').order('name').then(({ data }) => {
+    const fetchUsers = async () => {
+      const { data } = await supabase.from('users_profile').select('*').order('name');
       setUsers(data || []);
-    });
+      const pMap: Record<string, string> = {};
+      data?.forEach(p => pMap[p.id] = p.name);
+      setProfiles(pMap);
+    };
+    fetchUsers();
   }, [isAdmin]);
 
   useEffect(() => {
     if (!isAdmin) return;
     const fetchContacts = async () => {
       setLoadingContacts(true);
-      let query = supabase.from('companies_contacts').select('id, company_name, sponsor_type, contact_person_name').order('id');
+
+      // Fetch already allocated contact IDs
+      const { data: assignments } = await supabase.from('call_assignments').select('contact_start_id, contact_end_id');
+      const allocated = new Set<number>();
+      assignments?.forEach(a => {
+        for (let i = a.contact_start_id; i <= a.contact_end_id; i++) allocated.add(i);
+      });
+      setAllocatedIds(allocated);
+
+      let query = supabase.from('companies_contacts').select('id, company_name, sponsor_type, contact_person_name, created_by').order('id');
       if (sponsorFilter) query = query.eq('sponsor_type', sponsorFilter);
       const { data } = await query;
-      setContacts(data || []);
+
+      // Filter out already allocated contacts
+      const unallocated = (data || []).filter(c => !allocated.has(c.id));
+      setContacts(unallocated);
       setSelectedIds(new Set());
       setLoadingContacts(false);
     };
@@ -80,7 +100,6 @@ const AssignCalls: React.FC = () => {
     setLoading(true);
     const sortedIds = Array.from(selectedIds).sort((a, b) => a - b);
     
-    // Group consecutive IDs into ranges for efficient storage
     const ranges: { start: number; end: number }[] = [];
     let rangeStart = sortedIds[0];
     let rangeEnd = sortedIds[0];
@@ -111,6 +130,20 @@ const AssignCalls: React.FC = () => {
     } else {
       toast.success(`${selectedIds.size} contacts assigned successfully!`);
       setSelectedIds(new Set());
+      // Refresh to remove assigned contacts from list
+      setSponsorFilter(prev => { 
+        // trigger re-fetch
+        setTimeout(() => setSponsorFilter(prev), 0);
+        return prev === '' ? '' : prev; 
+      });
+      // Force re-fetch
+      const { data: assignments } = await supabase.from('call_assignments').select('contact_start_id, contact_end_id');
+      const allocated = new Set<number>();
+      assignments?.forEach(a => {
+        for (let i = a.contact_start_id; i <= a.contact_end_id; i++) allocated.add(i);
+      });
+      setAllocatedIds(allocated);
+      setContacts(prev => prev.filter(c => !allocated.has(c.id)));
     }
   };
 
@@ -124,7 +157,6 @@ const AssignCalls: React.FC = () => {
         <h1 className="text-3xl font-bold font-display gradient-text mb-6">Assign Call List</h1>
 
         <form onSubmit={handleAssign} className="space-y-5">
-          {/* Top controls */}
           <div className="glass-card p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
@@ -168,14 +200,13 @@ const AssignCalls: React.FC = () => {
             </div>
           </div>
 
-          {/* Contact list */}
           <div className="glass-card overflow-hidden">
             {loadingContacts ? (
               <div className="flex items-center justify-center py-16">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             ) : filtered.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-12">No contacts found.</p>
+              <p className="text-sm text-muted-foreground text-center py-12">No unallocated contacts found.</p>
             ) : (
               <div className="overflow-x-auto max-h-[400px] overflow-y-auto scrollbar-glass">
                 <table className="glass-table w-full">
@@ -190,6 +221,7 @@ const AssignCalls: React.FC = () => {
                       <th>Company</th>
                       <th>Contact Person</th>
                       <th>Sponsor Type</th>
+                      <th>Uploaded By</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -212,6 +244,7 @@ const AssignCalls: React.FC = () => {
                               {SPONSOR_TYPE_LABELS[c.sponsor_type]}
                             </span>
                           </td>
+                          <td className="text-sm text-muted-foreground">{profiles[c.created_by] || 'Unknown'}</td>
                         </tr>
                       );
                     })}

@@ -17,13 +17,12 @@ const CallList: React.FC = () => {
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
-    const today = new Date().toISOString().split('T')[0];
 
+    // Fetch ALL assignments for this user (no date filter)
     const { data: assignments } = await supabase
       .from('call_assignments')
       .select('*')
-      .eq('assigned_user_id', user.id)
-      .eq('date', today);
+      .eq('assigned_user_id', user.id);
 
     if (assignments && assignments.length > 0) {
       const ids: number[] = [];
@@ -31,14 +30,16 @@ const CallList: React.FC = () => {
         for (let i = a.contact_start_id; i <= a.contact_end_id; i++) ids.push(i);
       }
 
-      if (ids.length > 0) {
-        const { data } = await supabase.from('companies_contacts').select('*').in('id', ids).order('id');
+      const uniqueIds = [...new Set(ids)];
+
+      if (uniqueIds.length > 0) {
+        const { data } = await supabase.from('companies_contacts').select('*').in('id', uniqueIds).order('id');
         setContacts(data || []);
 
         const { data: updates } = await supabase
           .from('call_updates')
           .select('*')
-          .in('contact_id', ids)
+          .in('contact_id', uniqueIds)
           .eq('updated_by', user.id);
 
         if (updates) {
@@ -82,7 +83,7 @@ END:VCALENDAR`;
   return (
     <Layout>
       <div className="max-w-6xl mx-auto animate-fade-in space-y-6">
-        <h1 className="text-3xl font-bold font-display gradient-text">Today's Call & Mail List</h1>
+        <h1 className="text-3xl font-bold font-display gradient-text">My Allocated Contacts</h1>
 
         <div className="glass-card overflow-hidden">
           {loading ? (
@@ -92,7 +93,7 @@ END:VCALENDAR`;
           ) : contacts.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
               <Phone className="w-12 h-12 mx-auto mb-4 opacity-30" />
-              <p>No calls assigned for today.</p>
+              <p>No contacts allocated to you yet.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">

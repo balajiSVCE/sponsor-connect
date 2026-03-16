@@ -9,17 +9,34 @@ const AllContacts: React.FC = () => {
   const [contacts, setContacts] = useState<CompanyContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [allocationMap, setAllocationMap] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('companies_contacts')
-        .select('*')
-        .order('created_at', { ascending: false });
-      setContacts(data || []);
+    const fetchAll = async () => {
+      const [{ data: contactsData }, { data: profs }, { data: assignments }] = await Promise.all([
+        supabase.from('companies_contacts').select('*').order('created_at', { ascending: false }),
+        supabase.from('users_profile').select('id, name'),
+        supabase.from('call_assignments').select('contact_start_id, contact_end_id, assigned_user_id'),
+      ]);
+
+      const pMap: Record<string, string> = {};
+      profs?.forEach(p => pMap[p.id] = p.name);
+      setProfiles(pMap);
+
+      // Build allocation map: contact_id -> assigned user name
+      const aMap: Record<number, string> = {};
+      assignments?.forEach(a => {
+        for (let i = a.contact_start_id; i <= a.contact_end_id; i++) {
+          aMap[i] = pMap[a.assigned_user_id] || 'Unknown';
+        }
+      });
+      setAllocationMap(aMap);
+
+      setContacts(contactsData || []);
       setLoading(false);
     };
-    fetch();
+    fetchAll();
   }, []);
 
   const filtered = contacts.filter(c =>
@@ -64,7 +81,8 @@ const AllContacts: React.FC = () => {
                     <th className="text-left p-4 text-muted-foreground font-medium">Phones</th>
                     <th className="text-left p-4 text-muted-foreground font-medium">Emails</th>
                     <th className="text-left p-4 text-muted-foreground font-medium">Sponsor Type</th>
-                    <th className="text-left p-4 text-muted-foreground font-medium">Found Via</th>
+                    <th className="text-left p-4 text-muted-foreground font-medium">Uploaded By</th>
+                    <th className="text-left p-4 text-muted-foreground font-medium">Allocated To</th>
                     <th className="text-left p-4 text-muted-foreground font-medium">Date</th>
                   </tr>
                 </thead>
@@ -72,7 +90,7 @@ const AllContacts: React.FC = () => {
                   {filtered.map(c => (
                     <tr key={c.id} className="border-b border-border/20 hover:bg-muted/10 transition-colors">
                       <td className="p-4 font-medium">{c.company_name}</td>
-                      <td className="p-4 text-muted-foreground">{(c as any).contact_person_name || '—'}</td>
+                      <td className="p-4 text-muted-foreground">{c.contact_person_name || '—'}</td>
                       <td className="p-4">{c.phones?.join(', ') || '—'}</td>
                       <td className="p-4">{c.emails?.join(', ') || '—'}</td>
                       <td className="p-4">
@@ -80,7 +98,14 @@ const AllContacts: React.FC = () => {
                           {SPONSOR_TYPE_LABELS[c.sponsor_type]}
                         </span>
                       </td>
-                      <td className="p-4 text-muted-foreground">{CONTACT_FOUND_LABELS[c.contact_found_method]}</td>
+                      <td className="p-4 text-muted-foreground">{profiles[c.created_by] || 'Unknown'}</td>
+                      <td className="p-4">
+                        {allocationMap[c.id] ? (
+                          <span className="px-2 py-1 rounded-full text-xs bg-accent/20 text-accent-foreground">{allocationMap[c.id]}</span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Not allocated</span>
+                        )}
+                      </td>
                       <td className="p-4 text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
                     </tr>
                   ))}
