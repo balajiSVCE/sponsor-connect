@@ -13,7 +13,8 @@ const AdminContacts: React.FC = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
-  const [stats, setStats] = useState({ total: 0, users: 0, today: 0, calls: 0 });
+  const [stats, setStats] = useState({ total: 0, users: 0, today: 0, calls: 0, callsToday: 0 });
+  const [todayCallsMap, setTodayCallsMap] = useState<Record<number, number>>({});
   const pageSize = 20;
 
   useEffect(() => {
@@ -22,13 +23,21 @@ const AdminContacts: React.FC = () => {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
-      const [{ count: totalC }, { count: todayC }, { count: usersC }, { count: callsC }] = await Promise.all([
+      const [{ count: totalC }, { count: todayC }, { count: usersC }, { count: callsC }, { data: todayCalls }] = await Promise.all([
         supabase.from('companies_contacts').select('*', { count: 'exact', head: true }),
         supabase.from('companies_contacts').select('*', { count: 'exact', head: true }).gte('created_at', today + 'T00:00:00'),
         supabase.from('users_profile').select('*', { count: 'exact', head: true }),
         supabase.from('call_updates').select('*', { count: 'exact', head: true }),
+        supabase.from('call_updates').select('contact_id, updated_at').gte('updated_at', today + 'T00:00:00'),
       ]);
-      setStats({ total: totalC || 0, today: todayC || 0, users: usersC || 0, calls: callsC || 0 });
+      setStats({ total: totalC || 0, today: todayC || 0, users: usersC || 0, calls: callsC || 0, callsToday: todayCalls?.length || 0 });
+
+      // Build today's calls count per contact
+      const tcMap: Record<number, number> = {};
+      todayCalls?.forEach(u => {
+        tcMap[u.contact_id] = (tcMap[u.contact_id] || 0) + 1;
+      });
+      setTodayCallsMap(tcMap);
 
       const { data: profs } = await supabase.from('users_profile').select('id, name');
       const pMap: Record<string, string> = {};
@@ -49,11 +58,12 @@ const AdminContacts: React.FC = () => {
   }, [isAdmin, search, page]);
 
   const downloadCSV = () => {
-    const headers = ['ID', 'Company', 'Contact Person', 'Description', 'Phones', 'Emails', 'Sponsor Type', 'Added By', 'Date'];
+    const headers = ['ID', 'Company', 'Contact Person', 'Description', 'Phones', 'Emails', 'Sponsor Type', 'Added By', 'Calls Today', 'Date'];
     const rows = contacts.map(c => [
       c.id, c.company_name, c.contact_person_name || '', c.contact_description || '',
       c.phones?.join('; '), c.emails?.join('; '),
       SPONSOR_TYPE_LABELS[c.sponsor_type], profiles[c.created_by] || 'Unknown',
+      todayCallsMap[c.id] || 0,
       new Date(c.created_at).toLocaleDateString()
     ]);
     const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
@@ -71,6 +81,7 @@ const AdminContacts: React.FC = () => {
     { icon: Users, label: 'Total Users', value: stats.users },
     { icon: TrendingUp, label: "Today's Contacts", value: stats.today },
     { icon: Phone, label: 'Total Calls', value: stats.calls },
+    { icon: Phone, label: "Today's Calls", value: stats.callsToday },
   ];
 
   return (
@@ -78,7 +89,7 @@ const AdminContacts: React.FC = () => {
       <div className="max-w-7xl mx-auto animate-fade-in space-y-6">
         <h1 className="text-3xl font-bold font-display gradient-text">Admin — All Contacts</h1>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {statCards.map((s, i) => (
             <div key={i} className="glass-card p-5">
               <div className="flex items-center gap-3">
@@ -120,6 +131,7 @@ const AdminContacts: React.FC = () => {
                     <th>Emails</th>
                     <th>Sponsor Type</th>
                     <th>Added By</th>
+                    <th>Calls Today</th>
                     <th>Date</th>
                   </tr>
                 </thead>
@@ -134,6 +146,11 @@ const AdminContacts: React.FC = () => {
                       <td className="text-sm">{c.emails?.join(', ') || '—'}</td>
                       <td><span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">{SPONSOR_TYPE_LABELS[c.sponsor_type]}</span></td>
                       <td className="text-sm">{profiles[c.created_by] || 'Unknown'}</td>
+                      <td className="text-sm text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs ${todayCallsMap[c.id] ? 'bg-emerald-500/10 text-emerald-400' : 'text-muted-foreground'}`}>
+                          {todayCallsMap[c.id] || 0}
+                        </span>
+                      </td>
                       <td className="text-sm text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
                     </tr>
                   ))}
