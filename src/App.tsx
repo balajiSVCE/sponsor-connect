@@ -17,6 +17,8 @@ import AdminLeaderboard from "./pages/admin/AdminLeaderboard";
 import AdminCallFeedback from "./pages/admin/AdminCallFeedback";
 import AdminAllocations from "./pages/admin/AdminAllocations";
 import AdminDuplicates from "./pages/admin/AdminDuplicates";
+import AdminContactFilter from "./pages/admin/AdminContactFilter";
+import AdminUserActivity from "./pages/admin/AdminUserActivity";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
