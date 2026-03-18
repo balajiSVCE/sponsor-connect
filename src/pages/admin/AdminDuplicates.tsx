@@ -4,7 +4,8 @@ import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
 import { SPONSOR_TYPE_LABELS } from '@/types/database';
 import type { CompanyContact } from '@/types/database';
-import { Download, Search, AlertTriangle } from 'lucide-react';
+import { Download, AlertTriangle, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
 type DuplicateType = 'phone' | 'email' | 'company';
@@ -23,22 +24,21 @@ const AdminDuplicates: React.FC = () => {
   const [duplicates, setDuplicates] = useState<DuplicateGroup[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
 
-  useEffect(() => {
+  const fetchContacts = async () => {
     if (!isAdmin) return;
-    const fetch = async () => {
-      setLoading(true);
-      const [{ data: contactsData }, { data: profs }] = await Promise.all([
-        supabase.from('companies_contacts').select('*').order('id'),
-        supabase.from('users_profile').select('id, name'),
-      ]);
-      const pMap: Record<string, string> = {};
-      profs?.forEach(p => pMap[p.id] = p.name);
-      setProfiles(pMap);
-      setContacts(contactsData || []);
-      setLoading(false);
-    };
-    fetch();
-  }, [isAdmin]);
+    setLoading(true);
+    const [{ data: contactsData }, { data: profs }] = await Promise.all([
+      supabase.from('companies_contacts').select('*').order('id'),
+      supabase.from('users_profile').select('id, name'),
+    ]);
+    const pMap: Record<string, string> = {};
+    profs?.forEach(p => pMap[p.id] = p.name);
+    setProfiles(pMap);
+    setContacts(contactsData || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchContacts(); }, [isAdmin]);
 
   useEffect(() => {
     if (contacts.length === 0) { setDuplicates([]); return; }
@@ -81,8 +81,19 @@ const AdminDuplicates: React.FC = () => {
     setDuplicates(dupes);
   }, [contacts, activeTab]);
 
+  const removeContact = async (contactId: number) => {
+    if (!confirm('Are you sure you want to delete this contact? This cannot be undone.')) return;
+    // Also remove any call assignments referencing this contact
+    const { error } = await supabase.from('companies_contacts').delete().eq('id', contactId);
+    if (error) {
+      toast.error('Failed to delete: ' + error.message);
+    } else {
+      toast.success('Contact removed');
+      setContacts(prev => prev.filter(c => c.id !== contactId));
+    }
+  };
+
   const downloadDeduplicated = () => {
-    // Deduplicate by company name (keep first occurrence)
     const seen = new Set<string>();
     const unique: CompanyContact[] = [];
     contacts.forEach(c => {
@@ -132,7 +143,6 @@ const AdminDuplicates: React.FC = () => {
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-2">
           {tabs.map(t => (
             <button
@@ -147,7 +157,6 @@ const AdminDuplicates: React.FC = () => {
           ))}
         </div>
 
-        {/* Stats */}
         <div className="glass-card p-4 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500" />
           <p className="text-sm">
@@ -185,6 +194,7 @@ const AdminDuplicates: React.FC = () => {
                         <th>Emails</th>
                         <th>Sponsor Type</th>
                         <th>Added By</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -201,6 +211,15 @@ const AdminDuplicates: React.FC = () => {
                             </span>
                           </td>
                           <td>{profiles[c.created_by] || 'Unknown'}</td>
+                          <td>
+                            <button
+                              onClick={() => removeContact(c.id)}
+                              className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
+                              title="Delete this contact"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -121,7 +121,9 @@ const AdminCallFeedback: React.FC = () => {
                         </span>
                       </td>
                       <td className="text-sm">{e.sponsor_type ? SPONSOR_TYPE_LABELS[e.sponsor_type] : '-'}</td>
-                      <td className="text-sm max-w-[200px] truncate">{e.description || '-'}</td>
+                      <td className="text-sm max-w-[400px]">
+                        <div className="whitespace-pre-wrap break-words">{e.description || '-'}</div>
+                      </td>
                       <td className="text-sm">{e.attempt_type?.replace('_', ' ') || '-'}</td>
                       <td className="text-sm">{e.next_call_time ? new Date(e.next_call_time).toLocaleString() : '-'}</td>
                       <td className="text-sm text-muted-foreground">{new Date(e.updated_at).toLocaleString()}</td>
