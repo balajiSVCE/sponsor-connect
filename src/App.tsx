@@ -67,6 +67,8 @@ const App = () => (
             <Route path="/admin/feedback" element={<ProtectedRoute><AdminCallFeedback /></ProtectedRoute>} />
             <Route path="/admin/allocations" element={<ProtectedRoute><AdminAllocations /></ProtectedRoute>} />
             <Route path="/admin/duplicates" element={<ProtectedRoute><AdminDuplicates /></ProtectedRoute>} />
+            <Route path="/admin/contact-filter" element={<ProtectedRoute><AdminContactFilter /></ProtectedRoute>} />
+            <Route path="/admin/user-activity" element={<ProtectedRoute><AdminUserActivity /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

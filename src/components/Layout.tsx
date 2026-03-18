@@ -31,6 +31,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { to: '/admin/leaderboard', icon: Trophy, label: 'Leaderboard' },
     { to: '/admin/feedback', icon: MessageSquare, label: 'Call Feedback' },
     { to: '/admin/duplicates', icon: Copy, label: 'Duplicate Finder' },
+    { to: '/admin/contact-filter', icon: Filter, label: 'Contact Filter' },
+    { to: '/admin/user-activity', icon: Activity, label: 'User Activity' },
   ];
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
