@@ -17,6 +17,8 @@ import AdminLeaderboard from "./pages/admin/AdminLeaderboard";
 import AdminCallFeedback from "./pages/admin/AdminCallFeedback";
 import AdminAllocations from "./pages/admin/AdminAllocations";
 import AdminDuplicates from "./pages/admin/AdminDuplicates";
+import AdminContactFilter from "./pages/admin/AdminContactFilter";
+import AdminUserActivity from "./pages/admin/AdminUserActivity";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +67,8 @@ const App = () => (
             <Route path="/admin/feedback" element={<ProtectedRoute><AdminCallFeedback /></ProtectedRoute>} />
             <Route path="/admin/allocations" element={<ProtectedRoute><AdminAllocations /></ProtectedRoute>} />
             <Route path="/admin/duplicates" element={<ProtectedRoute><AdminDuplicates /></ProtectedRoute>} />
+            <Route path="/admin/contact-filter" element={<ProtectedRoute><AdminContactFilter /></ProtectedRoute>} />
+            <Route path="/admin/user-activity" element={<ProtectedRoute><AdminUserActivity /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

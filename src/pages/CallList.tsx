@@ -128,6 +128,15 @@ END:VCALENDAR`;
                           )}
                         </td>
                         <td className="flex items-center gap-1">
+                          {c.phones?.[0] && (
+                            <a
+                              href={`tel:${c.phones[0]}`}
+                              className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-400 transition-colors"
+                              title={`Call ${c.phones[0]}`}
+                            >
+                              <Phone className="w-4 h-4" />
+                            </a>
+                          )}
                           {isDone ? (
                             <>
                               <button
