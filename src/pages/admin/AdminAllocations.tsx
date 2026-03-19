@@ -191,20 +191,27 @@ const AdminAllocations: React.FC = () => {
             </div>
 
             {/* Per-user expandable list */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               {userAllocations.map(ua => (
-                <div key={ua.userId} className="glass-card overflow-hidden">
+                <div key={ua.userId} className="glass-card overflow-hidden border-l-4 border-l-primary/50">
                   <button
                     onClick={() => toggleExpand(ua.userId)}
-                    className="w-full flex items-center justify-between p-4 hover:bg-muted/10 transition-colors"
+                    className="w-full flex items-center justify-between p-5 hover:bg-muted/10 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
                         {ua.userName.charAt(0).toUpperCase()}
                       </div>
                       <div className="text-left">
-                        <p className="font-medium">{ua.userName}</p>
-                        <p className="text-xs text-muted-foreground">{ua.contactIds.length} contacts allocated</p>
+                        <p className="font-semibold text-lg">{ua.userName}</p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs bg-primary/10 text-primary font-medium">
+                            {ua.contactIds.length} contacts
+                          </span>
+                          <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs bg-accent text-accent-foreground font-medium">
+                            {ua.assignments.length} assignment ranges
+                          </span>
+                        </div>
                       </div>
                     </div>
                     {expandedUser === ua.userId ? <ChevronDown className="w-5 h-5 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-muted-foreground" />}
@@ -212,6 +219,18 @@ const AdminAllocations: React.FC = () => {
 
                   {expandedUser === ua.userId && (
                     <div className="border-t border-border/30">
+                      {/* Assignment ranges summary */}
+                      <div className="px-5 py-3 bg-muted/5 border-b border-border/20">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Assignment Ranges:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {ua.assignments.map(a => (
+                            <span key={a.id} className="inline-flex px-3 py-1 rounded-lg text-xs bg-primary/5 text-primary border border-primary/10">
+                              ID {a.contact_start_id} → {a.contact_end_id} <span className="text-muted-foreground ml-1">({new Date(a.date).toLocaleDateString()})</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
                       {loadingContacts ? (
                         <div className="flex justify-center py-8">
                           <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />

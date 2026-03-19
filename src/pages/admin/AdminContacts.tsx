@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
-import { Search, Download, Users, ClipboardList, Phone, TrendingUp } from 'lucide-react';
+import { Search, Download, Users, ClipboardList, Phone, TrendingUp, Trash2, X } from 'lucide-react';
 import { SPONSOR_TYPE_LABELS } from '@/types/database';
 import type { CompanyContact } from '@/types/database';
+import { toast } from 'sonner';
 
 const AdminContacts: React.FC = () => {
   const { isAdmin } = useAuth();
@@ -15,47 +16,64 @@ const AdminContacts: React.FC = () => {
   const [page, setPage] = useState(0);
   const [stats, setStats] = useState({ total: 0, users: 0, today: 0, calls: 0, callsToday: 0 });
   const [todayCallsMap, setTodayCallsMap] = useState<Record<number, number>>({});
+  const [deleteModal, setDeleteModal] = useState<{ contactId: number; companyName: string } | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
   const pageSize = 20;
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!isAdmin) return;
-    const fetchData = async () => {
-      setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
+    setLoading(true);
+    const today = new Date().toISOString().split('T')[0];
 
-      const [{ count: totalC }, { count: todayC }, { count: usersC }, { count: callsC }, { data: todayCalls }] = await Promise.all([
-        supabase.from('companies_contacts').select('*', { count: 'exact', head: true }),
-        supabase.from('companies_contacts').select('*', { count: 'exact', head: true }).gte('created_at', today + 'T00:00:00'),
-        supabase.from('users_profile').select('*', { count: 'exact', head: true }),
-        supabase.from('call_updates').select('*', { count: 'exact', head: true }),
-        supabase.from('call_updates').select('contact_id, updated_at').gte('updated_at', today + 'T00:00:00'),
-      ]);
-      setStats({ total: totalC || 0, today: todayC || 0, users: usersC || 0, calls: callsC || 0, callsToday: todayCalls?.length || 0 });
+    const [{ count: totalC }, { count: todayC }, { count: usersC }, { count: callsC }, { data: todayCalls }] = await Promise.all([
+      supabase.from('companies_contacts').select('*', { count: 'exact', head: true }),
+      supabase.from('companies_contacts').select('*', { count: 'exact', head: true }).gte('created_at', today + 'T00:00:00'),
+      supabase.from('users_profile').select('*', { count: 'exact', head: true }),
+      supabase.from('call_updates').select('*', { count: 'exact', head: true }),
+      supabase.from('call_updates').select('contact_id, updated_at').gte('updated_at', today + 'T00:00:00'),
+    ]);
+    setStats({ total: totalC || 0, today: todayC || 0, users: usersC || 0, calls: callsC || 0, callsToday: todayCalls?.length || 0 });
 
-      // Build today's calls count per contact
-      const tcMap: Record<number, number> = {};
-      todayCalls?.forEach(u => {
-        tcMap[u.contact_id] = (tcMap[u.contact_id] || 0) + 1;
-      });
-      setTodayCallsMap(tcMap);
+    const tcMap: Record<number, number> = {};
+    todayCalls?.forEach(u => {
+      tcMap[u.contact_id] = (tcMap[u.contact_id] || 0) + 1;
+    });
+    setTodayCallsMap(tcMap);
 
-      const { data: profs } = await supabase.from('users_profile').select('id, name');
-      const pMap: Record<string, string> = {};
-      profs?.forEach(p => pMap[p.id] = p.name);
-      setProfiles(pMap);
+    const { data: profs } = await supabase.from('users_profile').select('id, name');
+    const pMap: Record<string, string> = {};
+    profs?.forEach(p => pMap[p.id] = p.name);
+    setProfiles(pMap);
 
-      let query = supabase
-        .from('companies_contacts')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-      if (search) query = query.ilike('company_name', `%${search}%`);
-      const { data } = await query;
-      setContacts(data || []);
-      setLoading(false);
-    };
-    fetchData();
-  }, [isAdmin, search, page]);
+    let query = supabase
+      .from('companies_contacts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    if (search) query = query.ilike('company_name', `%${search}%`);
+    const { data } = await query;
+    setContacts(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, [isAdmin, search, page]);
+
+  const handleDelete = async () => {
+    if (deletePassword !== '123') {
+      toast.error('Incorrect password');
+      return;
+    }
+    if (!deleteModal) return;
+    const { error } = await supabase.from('companies_contacts').delete().eq('id', deleteModal.contactId);
+    if (error) {
+      toast.error('Failed to delete: ' + error.message);
+    } else {
+      toast.success('Contact removed successfully');
+      setDeleteModal(null);
+      setDeletePassword('');
+      fetchData();
+    }
+  };
 
   const downloadCSV = () => {
     const headers = ['ID', 'Company', 'Contact Person', 'Description', 'Phones', 'Emails', 'Sponsor Type', 'Added By', 'Calls Today', 'Date'];
@@ -133,6 +151,7 @@ const AdminContacts: React.FC = () => {
                     <th>Added By</th>
                     <th>Calls Today</th>
                     <th>Date</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -152,6 +171,15 @@ const AdminContacts: React.FC = () => {
                         </span>
                       </td>
                       <td className="text-sm text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
+                      <td>
+                        <button
+                          onClick={() => setDeleteModal({ contactId: c.id, companyName: c.company_name })}
+                          className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
+                          title="Remove contact"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -166,6 +194,39 @@ const AdminContacts: React.FC = () => {
           <button onClick={() => setPage(p => p + 1)} disabled={contacts.length < pageSize} className="px-4 py-2 rounded-lg glass text-sm disabled:opacity-30">Next</button>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm animate-fade-in">
+          <div className="glass-card w-full max-w-sm p-6 space-y-4 animate-slide-up">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold font-display text-destructive">Delete Contact</h2>
+              <button onClick={() => { setDeleteModal(null); setDeletePassword(''); }} className="p-1.5 rounded-lg hover:bg-muted/30">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete <span className="font-semibold text-foreground">{deleteModal.companyName}</span>? Enter password to confirm.
+            </p>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={e => setDeletePassword(e.target.value)}
+              placeholder="Enter password..."
+              className="glass-input w-full px-4 py-2.5"
+              onKeyDown={e => e.key === 'Enter' && handleDelete()}
+            />
+            <div className="flex gap-2">
+              <button onClick={() => { setDeleteModal(null); setDeletePassword(''); }} className="flex-1 px-4 py-2.5 rounded-lg glass text-sm">
+                Cancel
+              </button>
+              <button onClick={handleDelete} className="flex-1 px-4 py-2.5 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
