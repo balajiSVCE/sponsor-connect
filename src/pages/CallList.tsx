@@ -204,7 +204,8 @@ const StatusUpdateModal: React.FC<{
   const [saving, setSaving] = useState(false);
 
   const isEdit = !!existing;
-  const showFollowUp = status !== 'rejected';
+  const showFollowUp = status === 'hope' || status === 'accepted' || status === 'follow_up_call';
+  const showFollowUpDateTime = status === 'follow_up_call';
 
   const handleSave = async () => {
     setSaving(true);
@@ -213,7 +214,7 @@ const StatusUpdateModal: React.FC<{
       updated_by: userId,
       status,
       description: description || null,
-      next_call_time: status === 'no_response' ? nextCallTime || null : null,
+      next_call_time: (status === 'no_response' || status === 'follow_up_call') ? nextCallTime || null : null,
       attempt_type: status === 'no_response' ? attemptType : null,
       sponsor_type: (status === 'hope' || status === 'accepted') ? sponsorType : null,
       follow_up_date: showFollowUp && followUpDate ? followUpDate : null,
