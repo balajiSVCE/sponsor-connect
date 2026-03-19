@@ -16,7 +16,7 @@ export type SponsorType =
   | 'other' 
   | 'gold';
 
-export type CallStatus = 'hope' | 'accepted' | 'rejected' | 'no_response';
+export type CallStatus = 'hope' | 'accepted' | 'rejected' | 'no_response' | 'wrong_number' | 'follow_up_call';
 
 export type AttemptType = 'reschedule' | 'multiple_attempts_done';
 
@@ -94,4 +94,6 @@ export const CALL_STATUS_LABELS: Record<CallStatus, string> = {
   accepted: 'Accepted',
   rejected: 'Rejected',
   no_response: 'No Response',
+  wrong_number: 'Wrong Number / Not in Use',
+  follow_up_call: 'Going to Make Another Call',
 };

@@ -9,6 +9,7 @@ import type { CallUpdate } from '@/types/database';
 interface FeedbackEntry extends CallUpdate {
   company_name?: string;
   updater_name?: string;
+  contact_owner?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -16,6 +17,8 @@ const STATUS_COLORS: Record<string, string> = {
   accepted: 'bg-emerald-500/20 text-emerald-400',
   rejected: 'bg-destructive/20 text-destructive',
   no_response: 'bg-muted text-muted-foreground',
+  wrong_number: 'bg-orange-500/20 text-orange-400',
+  follow_up_call: 'bg-blue-500/20 text-blue-400',
 };
 
 const AdminCallFeedback: React.FC = () => {
@@ -42,15 +45,27 @@ const AdminCallFeedback: React.FC = () => {
       const userIds = [...new Set(updates.map(u => u.updated_by))];
 
       const [{ data: contacts }, { data: profiles }] = await Promise.all([
-        supabase.from('companies_contacts').select('id, company_name').in('id', contactIds),
+        supabase.from('companies_contacts').select('id, company_name, created_by').in('id', contactIds),
         supabase.from('users_profile').select('id, name').in('id', userIds),
       ]);
 
-      const enriched: FeedbackEntry[] = updates.map(u => ({
-        ...u,
-        company_name: contacts?.find(c => c.id === u.contact_id)?.company_name || 'Unknown',
-        updater_name: profiles?.find(p => p.id === u.updated_by)?.name || 'Unknown',
-      }));
+      // Also fetch contact owners (created_by users)
+      const ownerIds = [...new Set((contacts || []).map(c => c.created_by).filter(Boolean))];
+      const allProfileIds = [...new Set([...userIds, ...ownerIds])];
+      const { data: allProfiles } = await supabase.from('users_profile').select('id, name').in('id', allProfileIds);
+
+      const profileMap: Record<string, string> = {};
+      allProfiles?.forEach(p => profileMap[p.id] = p.name);
+
+      const enriched: FeedbackEntry[] = updates.map(u => {
+        const contact = contacts?.find(c => c.id === u.contact_id);
+        return {
+          ...u,
+          company_name: contact?.company_name || 'Unknown',
+          updater_name: profileMap[u.updated_by] || 'Unknown',
+          contact_owner: contact?.created_by ? profileMap[contact.created_by] || 'Unknown' : 'Unknown',
+        };
+      });
 
       setEntries(enriched);
       setLoading(false);
@@ -62,6 +77,7 @@ const AdminCallFeedback: React.FC = () => {
     !search ||
     e.company_name?.toLowerCase().includes(search.toLowerCase()) ||
     e.updater_name?.toLowerCase().includes(search.toLowerCase()) ||
+    e.contact_owner?.toLowerCase().includes(search.toLowerCase()) ||
     e.description?.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -69,7 +85,7 @@ const AdminCallFeedback: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto animate-fade-in space-y-6">
+      <div className="max-w-7xl mx-auto animate-fade-in space-y-6">
         <h1 className="text-3xl font-bold font-display gradient-text flex items-center gap-3">
           <MessageSquare className="w-8 h-8" /> Call Feedback
         </h1>
@@ -80,7 +96,7 @@ const AdminCallFeedback: React.FC = () => {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by company, user, or description..."
+            placeholder="Search by company, user, owner, or description..."
             className="glass-input w-full pl-11 pr-4 py-2.5"
           />
         </div>
@@ -101,6 +117,7 @@ const AdminCallFeedback: React.FC = () => {
                 <thead>
                   <tr>
                     <th>Company</th>
+                    <th>Contact Owner</th>
                     <th>Updated By</th>
                     <th>Status</th>
                     <th>Sponsor Type</th>
@@ -114,6 +131,11 @@ const AdminCallFeedback: React.FC = () => {
                   {filtered.map(e => (
                     <tr key={e.id}>
                       <td className="font-medium">{e.company_name}</td>
+                      <td className="text-sm">
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground">
+                          {e.contact_owner}
+                        </span>
+                      </td>
                       <td className="text-sm">{e.updater_name}</td>
                       <td>
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[e.status] || ''}`}>
@@ -122,7 +144,7 @@ const AdminCallFeedback: React.FC = () => {
                       </td>
                       <td className="text-sm">{e.sponsor_type ? SPONSOR_TYPE_LABELS[e.sponsor_type] : '-'}</td>
                       <td className="text-sm max-w-[400px]">
-                        <div className="whitespace-pre-wrap break-words">{e.description || '-'}</div>
+                        <div className="whitespace-pre-wrap break-words leading-relaxed">{e.description || '-'}</div>
                       </td>
                       <td className="text-sm">{e.attempt_type?.replace('_', ' ') || '-'}</td>
                       <td className="text-sm">{e.next_call_time ? new Date(e.next_call_time).toLocaleString() : '-'}</td>
