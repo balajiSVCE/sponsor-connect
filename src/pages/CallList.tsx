@@ -254,19 +254,23 @@ const StatusUpdateModal: React.FC<{
           </select>
         </div>
 
-        {status === 'no_response' && (
+        {(status === 'no_response' || status === 'follow_up_call') && (
           <>
             <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Next Call Time</label>
+              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+                {status === 'follow_up_call' ? 'Follow-up Call Date & Time' : 'Next Call Time'}
+              </label>
               <input type="datetime-local" value={nextCallTime} onChange={e => setNextCallTime(e.target.value)} className="glass-input w-full px-4 py-2.5" />
             </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Attempt Type</label>
-              <select value={attemptType} onChange={e => setAttemptType(e.target.value as AttemptType)} className="glass-input w-full px-4 py-2.5">
-                <option value="reschedule" className="bg-card">Reschedule</option>
-                <option value="multiple_attempts_done" className="bg-card">Multiple Attempts Done</option>
-              </select>
-            </div>
+            {status === 'no_response' && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Attempt Type</label>
+                <select value={attemptType} onChange={e => setAttemptType(e.target.value as AttemptType)} className="glass-input w-full px-4 py-2.5">
+                  <option value="reschedule" className="bg-card">Reschedule</option>
+                  <option value="multiple_attempts_done" className="bg-card">Multiple Attempts Done</option>
+                </select>
+              </div>
+            )}
           </>
         )}
 
